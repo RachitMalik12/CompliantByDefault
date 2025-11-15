@@ -1,6 +1,6 @@
 # 🛡️ CompliantByDefault
 
-**AI-Powered SOC 2 Readiness Agent**
+**SOC 2 Readiness Agent**
 
 Automatically scan your codebase for security vulnerabilities and SOC 2 compliance gaps. Get instant, actionable insights powered by Google Gemini AI.
 
