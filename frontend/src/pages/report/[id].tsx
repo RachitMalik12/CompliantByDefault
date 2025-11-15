@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import ReportCard from '@/components/ReportCard';
 import FindingsTable from '@/components/FindingsTable';
+import {downloadPDF } from '@/lib/api';
 import { getReport, createGitHubIssue } from '@/lib/api';
 import type { Report } from '@/types';
 
@@ -14,6 +15,7 @@ export default function ReportPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [creatingIssueForRec, setCreatingIssueForRec] = useState<number | null>(null);
   const [issuesCreatedForRec, setIssuesCreatedForRec] = useState<Set<number>>(new Set());
 
@@ -23,7 +25,7 @@ export default function ReportPage() {
     const fetchReport = async () => {
       try {
         const data = await getReport(id as string);
-        setReport(data);
+        setReport(data as any);
         setLoading(false);
       } catch (err: any) {
         setError(err.response?.data?.detail || err.message || 'Failed to load report');
@@ -134,6 +136,17 @@ export default function ReportPage() {
 
   const { summary, score, controls, findings, analysis, recommendations } = report;
 
+  const handleDownloadPDF = async () => {
+    setDownloadingPDF(true);
+    try {
+      await downloadPDF(report.id);
+    } catch (err: any) {
+      alert(`Failed to download PDF: ${err.message}`);
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
+
   // Extract repository name from URL
   const getRepoName = (repoUrl: string) => {
     try {
@@ -203,6 +216,30 @@ export default function ReportPage() {
           {/* Header */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
+              <h1 className="text-4xl font-bold text-gray-900">Compliance Report</h1>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={downloadingPDF}
+                  className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {downloadingPDF ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download PDF
+                    </>
+                  )}
+                </button>
               <div>
                 <h1 className="text-4xl font-bold text-gray-900">SOC 2 Compliance Report</h1>
                 <p className="text-lg text-gray-600 mt-1">
@@ -235,7 +272,28 @@ export default function ReportPage() {
             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <h2 className="text-2xl font-bold mb-4">🤖 AI Analysis</h2>
               <div className="prose max-w-none">
-                <p className="text-gray-700">{analysis.posture}</p>
+                {typeof analysis.posture === 'string' ? (
+                  <p className="text-gray-700">{analysis.posture}</p>
+                ) : typeof analysis.posture === 'object' && analysis.posture !== null ? (
+                  <div className="space-y-4">
+                    {(analysis.posture as any).assessment && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-2">Assessment</h3>
+                        <p className="text-gray-700">{(analysis.posture as any).assessment}</p>
+                      </div>
+                    )}
+                    {(analysis.posture as any).key_weaknesses && Array.isArray((analysis.posture as any).key_weaknesses) && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-2">Key Weaknesses</h3>
+                        <ul className="list-disc list-inside space-y-1">
+                          {(analysis.posture as any).key_weaknesses.map((weakness: string, idx: number) => (
+                            <li key={idx} className="text-gray-700">{weakness}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </div>
           )}
