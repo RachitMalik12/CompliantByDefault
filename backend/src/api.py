@@ -37,6 +37,10 @@ class LocalScanRequest(BaseModel):
 class GitHubScanRequest(BaseModel):
     repo_url: str = Field(..., description="GitHub repository URL")
     token: Optional[str] = Field(None, description="GitHub personal access token")
+    
+    class Config:
+        # Automatically strip whitespace from string fields
+        str_strip_whitespace = True
 
 class ScanResponse(BaseModel):
     job_id: str
@@ -123,15 +127,18 @@ async def scan_github(request: GitHubScanRequest):
         Job ID and status
     """
     try:
+        # Strip whitespace from repo_url
+        repo_url = request.repo_url.strip()
+        
         job_id = await scan_engine.scan_github(
-            request.repo_url,
+            repo_url,
             request.token
         )
         
         return ScanResponse(
             job_id=job_id,
             status="started",
-            message=f"Scan initiated for {request.repo_url}"
+            message=f"Scan initiated for {repo_url}"
         )
     
     except ValueError as e:

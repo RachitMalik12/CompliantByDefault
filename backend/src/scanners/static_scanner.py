@@ -235,15 +235,19 @@ class StaticScanner:
             snippet = '\n'.join(f"{i+1}: {lines[i]}" for i in range(start, end))
             context_snippets.append(snippet)
         
+        # Build findings list and context strings
+        findings_list = '\n'.join([f"{i+1}. {f['type']} at line {f['line']}: {f['message']}" for i, f in enumerate(findings_summary)])
+        context_list = '\n'.join([f"Finding {i+1} context:\n{snippet}\n" for i, snippet in enumerate(context_snippets)])
+        
         prompt = f"""You are a security expert analyzing code for false positives in SOC 2 compliance scanning.
 
 File: {Path(file_path).name}
 
 Potential Issues Found ({len(findings)}):
-{chr(10).join([f"{i+1}. {f['type']} at line {f['line']}: {f['message']}" for i, f in enumerate(findings_summary)])}
+{findings_list}
 
 Code Context:
-{chr(10).join([f"Finding {i+1} context:\n{snippet}\n" for i, snippet in enumerate(context_snippets)])}
+{context_list}
 
 Task: Analyze each finding and determine if it's a TRUE POSITIVE or FALSE POSITIVE.
 
@@ -258,6 +262,7 @@ Respond with a JSON array of finding IDs (0-based) that are TRUE POSITIVES only.
 Format: {{"valid_findings": [0, 2, 4]}}
 
 Be conservative - if unsure, mark as true positive. Only filter obvious false positives."""
+
 
         try:
             response = self.model.generate_content(prompt)
