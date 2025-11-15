@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from .main import ScanEngine
 from .utils.logger import logger
+from .integrations.github_issues import GitHubIssueCreator
 
 # Load environment variables
 load_dotenv()
@@ -48,6 +49,18 @@ class ReportSummary(BaseModel):
     score: Optional[int]
     findings: Optional[int]
     repository: str
+
+class CreateIssueRequest(BaseModel):
+    repo_url: str = Field(..., description="GitHub repository URL")
+    finding: Dict = Field(..., description="Finding object to create issue for")
+    token: Optional[str] = Field(None, description="GitHub personal access token")
+
+class CreateIssueResponse(BaseModel):
+    success: bool
+    issue_number: Optional[int] = None
+    issue_url: Optional[str] = None
+    assignee: Optional[str] = None
+    message: str
 
 # Endpoints
 @app.get("/")
@@ -177,6 +190,53 @@ async def get_controls():
         config = yaml.safe_load(f)
     
     return config.get('controls', {})
+
+@app.post("/issue/create", response_model=CreateIssueResponse)
+async def create_github_issue(request: CreateIssueRequest):
+    """
+    Create a GitHub issue for a compliance finding.
+    
+    Args:
+        request: Issue creation request with repo URL, finding, and token
+        
+    Returns:
+        Issue creation result with issue number and URL
+    """
+    try:
+        # Get token from request or environment
+        token = request.token or os.getenv('GITHUB_TOKEN')
+        
+        if not token:
+            raise HTTPException(
+                status_code=400, 
+                detail="GitHub token is required. Provide in request or set GITHUB_TOKEN environment variable."
+            )
+        
+        # Create issue creator
+        issue_creator = GitHubIssueCreator(token=token)
+        
+        # Create the issue
+        result = issue_creator.create_issue(request.repo_url, request.finding)
+        
+        if result:
+            return CreateIssueResponse(
+                success=True,
+                issue_number=result['number'],
+                issue_url=result['url'],
+                assignee=result['assignee'],
+                message=f"Successfully created issue #{result['number']}"
+            )
+        else:
+            return CreateIssueResponse(
+                success=False,
+                message="Failed to create GitHub issue. Check logs for details."
+            )
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error creating GitHub issue: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
