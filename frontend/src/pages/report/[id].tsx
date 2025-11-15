@@ -5,8 +5,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import ReportCard from '@/components/ReportCard';
 import FindingsTable from '@/components/FindingsTable';
-import {downloadPDF } from '@/lib/api';
-import { getReport, createGitHubIssue } from '@/lib/api';
+import { downloadPDF, getReport, createGitHubIssue } from '@/lib/api';
 import type { Report } from '@/types';
 
 export default function ReportPage() {
@@ -216,8 +215,13 @@ export default function ReportPage() {
           {/* Header */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              <h1 className="text-4xl font-bold text-gray-900">Compliance Report</h1>
-              <div className="flex gap-3">
+              <div>
+                <h1 className="text-4xl font-bold text-gray-900">SOC 2 Compliance Report</h1>
+                <p className="text-lg text-gray-600 mt-1">
+                  for <GitHubIcon /><span className="font-semibold">{repoName}</span>
+                </p>
+              </div>
+              <div className="flex gap-4">
                 <button
                   onClick={handleDownloadPDF}
                   disabled={downloadingPDF}
@@ -240,13 +244,6 @@ export default function ReportPage() {
                     </>
                   )}
                 </button>
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900">SOC 2 Compliance Report</h1>
-                <p className="text-lg text-gray-600 mt-1">
-                  for <GitHubIcon /><span className="font-semibold">{repoName}</span>
-                </p>
-              </div>
-              <div className="flex gap-4">
                 <Link
                   href="/scan"
                   className="bg-primary-600 text-white px-6 py-2 rounded-md hover:bg-primary-700"

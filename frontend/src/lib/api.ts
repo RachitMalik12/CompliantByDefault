@@ -195,3 +195,50 @@ export async function downloadPDF(jobId: string): Promise<void> {
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
 }
+
+export interface CreateIssueRequest {
+  repo_url: string;
+  finding: {
+    type: string;
+    severity: string;
+    file: string;
+    line: number;
+    message: string;
+    control: string;
+    recommendation: string;
+  };
+  token?: string;
+}
+
+export interface CreateIssueResponse {
+  success: boolean;
+  issue_number?: number;
+  issue_url?: string;
+  assignee?: string;
+  message?: string;
+}
+
+export async function createGitHubIssue(
+  repo_url: string,
+  finding: any,
+  token?: string
+): Promise<CreateIssueResponse> {
+  const response = await fetch(`${API_BASE_URL}/issue/create`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      repo_url,
+      finding,
+      token,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to create GitHub issue');
+  }
+
+  return response.json();
+}
