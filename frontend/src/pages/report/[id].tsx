@@ -5,7 +5,8 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import ReportCard from '@/components/ReportCard';
 import FindingsTable from '@/components/FindingsTable';
-import { getReport, downloadPDF } from '@/lib/api';
+import {downloadPDF } from '@/lib/api';
+import { getReport, createGitHubIssue } from '@/lib/api';
 import type { Report } from '@/types';
 
 export default function ReportPage() {
@@ -15,6 +16,8 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [creatingIssueForRec, setCreatingIssueForRec] = useState<number | null>(null);
+  const [issuesCreatedForRec, setIssuesCreatedForRec] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!id) return;
@@ -50,6 +53,47 @@ export default function ReportPage() {
       <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
     </svg>
   );
+
+  const handleCreateIssueForRecommendation = async (rec: any, index: number) => {
+    const targetRepoUrl = report?.metadata?.repository;
+    
+    if (!targetRepoUrl) {
+      alert('Cannot create issue: No GitHub repository URL available');
+      return;
+    }
+
+    setCreatingIssueForRec(index);
+
+    try {
+      // Convert recommendation to finding format
+      const finding = {
+        type: rec.issue || 'compliance_issue',
+        severity: rec.priority || 'medium',
+        file: rec.file || '',
+        line: 0,
+        message: rec.issue || 'Compliance issue detected',
+        control: rec.control || 'SOC2',
+        recommendation: rec.action || 'Please address this issue'
+      };
+
+      const result = await createGitHubIssue(targetRepoUrl, finding);
+      
+      if (result.success) {
+        setIssuesCreatedForRec(prev => new Set([...prev, index]));
+        alert(`✅ GitHub issue #${result.issue_number} created successfully!\nAssigned to: ${result.assignee}\n\nView at: ${result.issue_url}`);
+        
+        if (result.issue_url) {
+          window.open(result.issue_url, '_blank');
+        }
+      } else {
+        alert(`❌ Failed to create issue: ${result.message}`);
+      }
+    } catch (error: any) {
+      alert(`❌ Error creating issue: ${error.message}`);
+    } finally {
+      setCreatingIssueForRec(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -103,10 +147,65 @@ export default function ReportPage() {
     }
   };
 
+  // Extract repository name from URL
+  const getRepoName = (repoUrl: string) => {
+    try {
+      const match = repoUrl.match(/github\.com\/[^\/]+\/([^\/]+?)(?:\.git)?$/);
+      return match ? match[1] : 'Repository';
+    } catch {
+      return 'Repository';
+    }
+  };
+
+  const repoName = report.metadata?.repository ? getRepoName(report.metadata.repository) : 'Repository';
+
+  // SOC 2 control information with links
+  const getControlInfo = (controlId: string) => {
+    const controlLinks: { [key: string]: { url: string; description: string } } = {
+      'CC1': {
+        url: 'https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2',
+        description: 'Control Environment - Organization demonstrates commitment to integrity and ethical values'
+      },
+      'CC2': {
+        url: 'https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2',
+        description: 'Communication and Information - Security information flow and communication'
+      },
+      'CC3': {
+        url: 'https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2',
+        description: 'Risk Assessment - Vulnerability management and risk identification'
+      },
+      'CC4': {
+        url: 'https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2',
+        description: 'Monitoring Activities - Continuous oversight and monitoring'
+      },
+      'CC5': {
+        url: 'https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2',
+        description: 'Control Activities - Security implementation and procedures'
+      },
+      'CC6': {
+        url: 'https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2',
+        description: 'Logical and Physical Access Controls - Authentication and authorization'
+      },
+      'CC7': {
+        url: 'https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2',
+        description: 'System Operations - Operational management and maintenance'
+      },
+      'CC8': {
+        url: 'https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2',
+        description: 'Change Management - Version control and change processes'
+      },
+      'CC9': {
+        url: 'https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2',
+        description: 'Risk Mitigation - Secrets management and encryption'
+      }
+    };
+    return controlLinks[controlId] || { url: 'https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2', description: 'SOC 2 Trust Service Criteria' };
+  };
+
   return (
     <>
       <Head>
-        <title>Report {report.id} - CompliantByDefault</title>
+        <title>SOC 2 Compliance Report for {repoName} - CompliantByDefault</title>
         <meta name="description" content={`SOC 2 compliance report - Score: ${summary.readiness_score}/100`} />
       </Head>
 
@@ -141,6 +240,13 @@ export default function ReportPage() {
                     </>
                   )}
                 </button>
+              <div>
+                <h1 className="text-4xl font-bold text-gray-900">SOC 2 Compliance Report</h1>
+                <p className="text-lg text-gray-600 mt-1">
+                  for <GitHubIcon /><span className="font-semibold">{repoName}</span>
+                </p>
+              </div>
+              <div className="flex gap-4">
                 <Link
                   href="/scan"
                   className="bg-primary-600 text-white px-6 py-2 rounded-md hover:bg-primary-700"
@@ -151,7 +257,7 @@ export default function ReportPage() {
             </div>
             <div className="text-sm text-gray-600">
               <p>Report ID: {report.id}</p>
-              <p>Repository: {report.metadata.repository}</p>
+              <p>Repository: <a href={report.metadata.repository} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:text-primary-800 hover:underline">{report.metadata.repository}</a></p>
               <p>Generated: {new Date(report.generated_at).toLocaleString()}</p>
             </div>
           </div>
@@ -199,15 +305,38 @@ export default function ReportPage() {
               <div className="space-y-4">
                 {recommendations.slice(0, 10).map((rec, idx) => (
                   <div key={idx} className="border-l-4 border-primary-500 pl-4 py-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                        rec.priority === 'critical' ? 'bg-red-100 text-red-800' :
-                        rec.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {rec.priority.toUpperCase()}
-                      </span>
-                      <span className="text-xs text-gray-500">{rec.control}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                          rec.priority === 'critical' ? 'bg-red-100 text-red-800' :
+                          rec.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {rec.priority.toUpperCase()}
+                        </span>
+                        <span className="text-xs text-gray-500">{rec.control}</span>
+                      </div>
+                      {report?.metadata?.repository && (
+                        <button
+                          onClick={() => handleCreateIssueForRecommendation(rec, idx)}
+                          disabled={creatingIssueForRec === idx || issuesCreatedForRec.has(idx)}
+                          className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                            issuesCreatedForRec.has(idx)
+                              ? 'bg-green-100 text-green-800 cursor-not-allowed'
+                              : creatingIssueForRec === idx
+                              ? 'bg-gray-100 text-gray-500 cursor-wait'
+                              : 'bg-primary-600 text-white hover:bg-primary-700'
+                          }`}
+                        >
+                          {issuesCreatedForRec.has(idx) ? (
+                            <>✓ Created</>
+                          ) : creatingIssueForRec === idx ? (
+                            <>Creating...</>
+                          ) : (
+                            <>Create Issue</>
+                          )}
+                        </button>
+                      )}
                     </div>
                     <h4 className="font-semibold text-gray-900">{rec.issue}</h4>
                     <p className="text-sm text-gray-600 mt-1">{rec.action}</p>
@@ -241,31 +370,50 @@ export default function ReportPage() {
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
             <h2 className="text-2xl font-bold mb-4">SOC 2 Control Coverage</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.entries(controls).map(([controlId, control]) => (
-                <div key={controlId} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-bold text-lg">{controlId}</h4>
-                    <span className={`text-2xl ${
-                      control.status === 'compliant' ? '✅' :
-                      control.status === 'partial' ? '⚠️' : '❌'
-                    }`}></span>
+              {Object.entries(controls).map(([controlId, control]) => {
+                const controlInfo = getControlInfo(controlId);
+                return (
+                  <div key={controlId} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-2">
+                      <a
+                        href={controlInfo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-lg text-primary-600 hover:text-primary-800 hover:underline"
+                        title={controlInfo.description}
+                      >
+                        {controlId} ↗
+                      </a>
+                      <span className={`text-2xl ${
+                        control.status === 'compliant' ? '✅' :
+                        control.status === 'partial' ? '⚠️' : '❌'
+                      }`}></span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">{control.name}</p>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-500">
+                        {control.findings_count} finding(s)
+                      </span>
+                      <span className="font-bold text-primary-600">
+                        {control.score}/100
+                      </span>
+                    </div>
+                    <a
+                      href={controlInfo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      Learn more about {controlId}
+                    </a>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">{control.name}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">
-                      {control.findings_count} finding(s)
-                    </span>
-                    <span className="font-bold text-primary-600">
-                      {control.score}/100
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
           {/* Findings Table */}
-          <FindingsTable findings={findings} />
+          <FindingsTable findings={findings} repoUrl={report.metadata?.repository} />
         </div>
       </main>
     </>
