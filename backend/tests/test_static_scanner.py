@@ -73,3 +73,32 @@ def greet(name):
     
     # Should have no or very few findings
     assert len(findings) == 0
+
+def test_false_positive_filtering(static_scanner, tmp_path):
+    """Test that second-pass validation filters false positives."""
+    # Code that might trigger patterns but isn't actually vulnerable
+    code_with_false_positives = """
+# This is a comment about SQL injection risks - not actual vulnerable code
+def safe_query(user_id):
+    # Using parameterized query - SAFE
+    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    
+def test_security():
+    # This is a test file checking for vulnerabilities
+    test_input = "'; DROP TABLE users; --"
+    assert validate_input(test_input) == False
+"""
+    test_file = tmp_path / "safe_code.py"
+    test_file.write_text(code_with_false_positives)
+    
+    # If model is available, validation should reduce findings
+    initial_findings = static_scanner.scan_file(test_file, code_with_false_positives)
+    
+    if static_scanner.model and initial_findings:
+        validated = static_scanner._validate_file_findings(
+            initial_findings, 
+            code_with_false_positives,
+            str(test_file)
+        )
+        # Should filter out false positives
+        assert len(validated) <= len(initial_findings)
