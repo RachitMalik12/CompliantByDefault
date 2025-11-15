@@ -4,6 +4,7 @@ from typing import List, Dict, Optional
 import yaml
 from ..utils.logger import logger
 from ..utils.file_loader import FileLoader
+from ..utils.github_url import GitHubURLConverter
 
 class StaticScanner:
     """Scanner for static code analysis - security patterns and anti-patterns."""
@@ -82,12 +83,14 @@ class StaticScanner:
         }
         return recommendations.get(issue_type, 'Review and remediate this security issue')
     
-    def scan_directory(self, root_path: str) -> List[Dict]:
+    def scan_directory(self, root_path: str, repo_url: Optional[str] = None, local_base_path: Optional[str] = None) -> List[Dict]:
         """
         Scan entire directory for security issues.
         
         Args:
             root_path: Root directory to scan
+            repo_url: GitHub repository URL (optional)
+            local_base_path: Base path of cloned repository (optional)
             
         Returns:
             List of all findings
@@ -103,6 +106,16 @@ class StaticScanner:
                 content = FileLoader.read_file(file_path)
                 if content:
                     findings = self.scan_file(file_path, content)
+                    
+                    # Convert file paths to GitHub URLs if applicable
+                    if repo_url and local_base_path:
+                        findings = [
+                            GitHubURLConverter.update_finding_with_github_url(
+                                finding, repo_url, local_base_path
+                            )
+                            for finding in findings
+                        ]
+                    
                     all_findings.extend(findings)
         
         logger.info(f"Static analysis complete. Found {len(all_findings)} issues")

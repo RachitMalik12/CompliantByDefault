@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Optional
 import re
 from ..utils.logger import logger
 from ..utils.file_loader import FileLoader
+from ..utils.github_url import GitHubURLConverter
 
 class DependencyScanner:
     """Scanner for analyzing dependencies and detecting vulnerable packages."""
@@ -181,12 +182,14 @@ class DependencyScanner:
         
         return findings
     
-    def scan_directory(self, root_path: str) -> List[Dict]:
+    def scan_directory(self, root_path: str, repo_url: Optional[str] = None, local_base_path: Optional[str] = None) -> List[Dict]:
         """
         Scan directory for dependency files and analyze them.
         
         Args:
             root_path: Root directory to scan
+            repo_url: GitHub repository URL (optional)
+            local_base_path: Base path of cloned repository (optional)
             
         Returns:
             List of all findings
@@ -201,6 +204,16 @@ class DependencyScanner:
                 content = FileLoader.read_file(file_path)
                 if content:
                     findings = self.scan_file(file_path, content)
+                    
+                    # Convert file paths to GitHub URLs if applicable
+                    if repo_url and local_base_path:
+                        findings = [
+                            GitHubURLConverter.update_finding_with_github_url(
+                                finding, repo_url, local_base_path
+                            )
+                            for finding in findings
+                        ]
+                    
                     all_findings.extend(findings)
         
         logger.info(f"Dependency scan complete. Found {len(all_findings)} issues")
