@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 import os
@@ -7,6 +8,7 @@ from dotenv import load_dotenv
 
 from .main import ScanEngine
 from .utils.logger import logger
+from .reports.pdf_generator import generate_pdf_report
 
 # Load environment variables
 load_dotenv()
@@ -177,6 +179,42 @@ async def get_controls():
         config = yaml.safe_load(f)
     
     return config.get('controls', {})
+
+@app.get("/report/{job_id}/pdf")
+async def download_pdf_report(job_id: str):
+    """
+    Download report as PDF.
+    
+    Args:
+        job_id: Report job identifier
+        
+    Returns:
+        PDF file
+    """
+    try:
+        # Get report data
+        report = scan_engine.get_report(job_id)
+        
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+        
+        # Generate PDF
+        pdf_path = generate_pdf_report(job_id, report)
+        
+        if not pdf_path.exists():
+            raise HTTPException(status_code=500, detail="Failed to generate PDF")
+        
+        return FileResponse(
+            path=str(pdf_path),
+            media_type='application/pdf',
+            filename=f"compliance_report_{job_id}.pdf"
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating PDF: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
