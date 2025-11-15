@@ -1,0 +1,177 @@
+controls:
+  CC1:
+    name: "Control Environment"
+    description: "Organization demonstrates commitment to integrity and ethical values"
+    checks:
+      - code_of_conduct
+      - security_policies
+      - access_controls
+    
+  CC2:
+    name: "Communication and Information"
+    description: "Organization obtains and communicates information necessary for security"
+    checks:
+      - logging
+      - monitoring
+      - audit_trails
+    
+  CC3:
+    name: "Risk Assessment"
+    description: "Organization identifies and assesses risks"
+    checks:
+      - dependency_scanning
+      - vulnerability_management
+      - threat_modeling
+    
+  CC4:
+    name: "Monitoring Activities"
+    description: "Organization monitors the system"
+    checks:
+      - continuous_monitoring
+      - alerting
+      - incident_response
+    
+  CC5:
+    name: "Control Activities"
+    description: "Organization implements control activities"
+    checks:
+      - access_control
+      - encryption
+      - secure_development
+    
+  CC6:
+    name: "Logical and Physical Access Controls"
+    description: "Restricts access to authorized users"
+    checks:
+      - authentication
+      - authorization
+      - mfa
+      - password_policies
+      - session_management
+    
+  CC7:
+    name: "System Operations"
+    description: "Manages system operations to meet objectives"
+    checks:
+      - deployment_automation
+      - configuration_management
+      - backup_recovery
+      - capacity_planning
+    
+  CC8:
+    name: "Change Management"
+    description: "Identifies and manages changes"
+    checks:
+      - version_control
+      - code_review
+      - change_approval
+      - rollback_procedures
+    
+  CC9:
+    name: "Risk Mitigation"
+    description: "Identifies and mitigates risks"
+    checks:
+      - secrets_management
+      - data_encryption
+      - network_security
+      - input_validation
+
+patterns:
+  secrets:
+    - name: "hardcoded_api_key"
+      pattern: "(?i)(api[_-]?key|apikey)\\s*[=:]\\s*['\"][a-zA-Z0-9]{20,}['\"]"
+      severity: "critical"
+      control: "CC9"
+      
+    - name: "hardcoded_password"
+      pattern: "(?i)(password|passwd|pwd)\\s*[=:]\\s*['\"][^'\"]{8,}['\"]"
+      severity: "critical"
+      control: "CC9"
+      
+    - name: "aws_access_key"
+      pattern: "AKIA[0-9A-Z]{16}"
+      severity: "critical"
+      control: "CC9"
+      
+    - name: "private_key"
+      pattern: "-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----"
+      severity: "critical"
+      control: "CC9"
+      
+    - name: "jwt_token"
+      pattern: "eyJ[a-zA-Z0-9_-]+\\.eyJ[a-zA-Z0-9_-]+\\.[a-zA-Z0-9_-]+"
+      severity: "high"
+      control: "CC6"
+  
+  security:
+    - name: "sql_injection_risk"
+      pattern: "(?i)(execute|exec|query)\\s*\\(.*\\+.*\\)"
+      severity: "high"
+      control: "CC9"
+      
+    - name: "insecure_random"
+      pattern: "(?i)(random\\.random|Math\\.random)"
+      severity: "medium"
+      control: "CC5"
+      
+    - name: "disabled_ssl_verification"
+      pattern: "(?i)(verify\\s*=\\s*False|SSL_VERIFY_NONE)"
+      severity: "high"
+      control: "CC9"
+      
+    - name: "weak_crypto"
+      pattern: "(?i)(MD5|SHA1)\\("
+      severity: "medium"
+      control: "CC5"
+  
+  authentication:
+    - name: "no_authentication"
+      pattern: "(?i)@app\\.(get|post|put|delete).*\\n(?!.*@require|.*@login_required)"
+      severity: "high"
+      control: "CC6"
+      
+    - name: "weak_session"
+      pattern: "(?i)session\\.permanent\\s*=\\s*False"
+      severity: "medium"
+      control: "CC6"
+  
+  logging:
+    - name: "missing_audit_log"
+      pattern: "(?i)(delete|update|create).*(?!.*log|.*audit)"
+      severity: "medium"
+      control: "CC2"
+      
+    - name: "sensitive_data_logging"
+      pattern: "(?i)log.*\\.(password|token|secret|key)"
+      severity: "high"
+      control: "CC2"
+
+file_patterns:
+  high_risk:
+    - "*.env"
+    - "*.pem"
+    - "*.key"
+    - "id_rsa"
+    - "credentials.json"
+    - "secrets.yaml"
+    
+  infrastructure:
+    - "terraform/*.tf"
+    - "*.tfvars"
+    - "cloudformation/*.yaml"
+    - "k8s/*.yaml"
+    - "docker-compose*.yaml"
+    - "Dockerfile"
+    
+  config:
+    - "config/*.json"
+    - "config/*.yaml"
+    - "*.config.js"
+    - "appsettings*.json"
+
+severity_weights:
+  critical: 10
+  high: 7
+  medium: 4
+  low: 2
+  info: 1
