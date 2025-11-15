@@ -170,6 +170,8 @@ backend/
 1. **Scan**: Multiple scanners analyze the codebase
    - Secret Scanner: Detects hardcoded credentials, API keys, tokens
    - Static Scanner: Finds security anti-patterns (SQL injection, weak crypto)
+     - **Two-Pass Analysis**: Initial pattern matching followed by AI-powered validation to filter false positives
+     - **Context-Aware**: Analyzes code context to distinguish real vulnerabilities from test code, comments, and safe implementations
    - Dependency Scanner: Checks for vulnerable packages
    - IaC Scanner: Analyzes Terraform, Docker, Kubernetes configs
 
@@ -177,6 +179,7 @@ backend/
    - Maps findings to SOC 2 controls
    - Assesses compliance gaps
    - Generates recommendations
+   - Validates potential issues to reduce false positives
 
 3. **Score**: Calculate readiness metrics
    - Overall compliance score (0-100)
