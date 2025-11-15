@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from ..utils.logger import logger
 from ..utils.file_loader import FileLoader
+from ..utils.github_url import GitHubURLConverter
 
 class IaCScanner:
     """Scanner for Infrastructure as Code security issues."""
@@ -269,12 +270,14 @@ class IaCScanner:
         
         return findings
     
-    def scan_directory(self, root_path: str) -> List[Dict]:
+    def scan_directory(self, root_path: str, repo_url: Optional[str] = None, local_base_path: Optional[str] = None) -> List[Dict]:
         """
         Scan directory for IaC files.
         
         Args:
             root_path: Root directory to scan
+            repo_url: GitHub repository URL (optional)
+            local_base_path: Base path of cloned repository (optional)
             
         Returns:
             List of all findings
@@ -298,6 +301,16 @@ class IaCScanner:
                 content = FileLoader.read_file(file_path)
                 if content:
                     findings = self.scan_file(file_path, content)
+                    
+                    # Convert file paths to GitHub URLs if applicable
+                    if repo_url and local_base_path:
+                        findings = [
+                            GitHubURLConverter.update_finding_with_github_url(
+                                finding, repo_url, local_base_path
+                            )
+                            for finding in findings
+                        ]
+                    
                     all_findings.extend(findings)
         
         logger.info(f"IaC scan complete. Found {len(all_findings)} issues")

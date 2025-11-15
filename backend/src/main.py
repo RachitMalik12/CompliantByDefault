@@ -104,10 +104,10 @@ class ScanEngine:
             # Run all scanners
             logger.info("Running scanners...")
             
-            secret_findings = self.secret_scanner.scan_directory(path)
-            static_findings = self.static_scanner.scan_directory(path)
-            dependency_findings = self.dependency_scanner.scan_directory(path)
-            iac_findings = self.iac_scanner.scan_directory(path)
+            secret_findings = self.secret_scanner.scan_directory(path, repo_url=repo_url, local_base_path=path)
+            static_findings = self.static_scanner.scan_directory(path, repo_url=repo_url, local_base_path=path)
+            dependency_findings = self.dependency_scanner.scan_directory(path, repo_url=repo_url, local_base_path=path)
+            iac_findings = self.iac_scanner.scan_directory(path, repo_url=repo_url, local_base_path=path)
             
             # Combine all findings
             all_findings = (
