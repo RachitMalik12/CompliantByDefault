@@ -3,6 +3,7 @@
 **AI-Powered SOC 2 Readiness Agent**
 
 Automatically scan your codebase for security vulnerabilities and SOC 2 compliance gaps. Get instant, actionable insights powered by Google Gemini AI.
+[Learn more](https://docs.google.com/presentation/d/1wilVnVOHPwz_yeMenZAMUf2XxgYXCpB-MZf6RFMunnU/edit?usp=sharing)
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
@@ -22,7 +23,7 @@ CompliantByDefault is a comprehensive compliance analysis tool that combines sta
 - 📁 **Flexible Sources**: Scan local directories or GitHub repositories
 - 📄 **Rich Reports**: Export as JSON or Markdown with detailed recommendations
 - 🌐 **Multiple Interfaces**: Web dashboard, REST API, or CLI tool
-- Pitch deck: [https://docs.google.com/presentation/d/1wilVnVOHPwz_yeMenZAMUf2XxgYXCpB-MZf6RFMunnU/edit?usp=sharing](url)
+
 ### What It Analyzes
 
 - **Secrets**: Hardcoded API keys, passwords, tokens, private keys
